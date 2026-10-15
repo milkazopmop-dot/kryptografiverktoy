@@ -11,6 +11,17 @@ Store og små engelske bokstaver støttes.
 Mellomrom beholdes på samme sted.
 Ved ugyldig tekst eller nøkkel vises en feilmelding.
 
+## Del 2 – Vigenère
+
+Vigenere-kryptering og dekryptering er implementert.
+Brukeren kan velge mellom Caesar og Vigenère.
+
+Nøkkelen kan inneholde store og små engelske bokstaver.
+Nøkkelen gjentas når teksten er lengre enn nøkkelen.
+Mellomrom beholdes og bruker ikke en bokstav fra nøkkelen.
+Ugyldig tekst eller nøkkel gir en feilmelding.
+
+
 ## Starte prosjektet
 
 Node.js og npm må være installert.
@@ -26,5 +37,5 @@ npm run dev
 
 ## Kilder og hjelp
 
-- Oppgaveteksten for Del 1.
+- Oppgavetekstene for Del 1 og Del 2.
 - ChatGPT: hjelp med kode, forklaringer og feilsøking.

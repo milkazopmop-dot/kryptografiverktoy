@@ -1,72 +1,147 @@
 <script lang="ts">
+    let metode = $state("Caesar");
     let tekst = $state("");
     let nokkel = $state<number | undefined>(3);
+    let vigenereNokkel = $state("");
     let resultat = $state("");
     let feil = $state("");
 
     const alfabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const bokstaver = alfabet + alfabet.toLowerCase();
 
-    function caesar(retning: number) {
-        feil = "";
+    function byttMetode() {
         resultat = "";
+        feil = "";
+    }
 
+    function kontrollerInput() {
         if (!tekst.trim()) {
             feil = "Skriv inn en tekst.";
-            return;
+            return false;
         }
 
-        // Проверяем исходный текст: только A–Z, a–z и пробелы
-        const tillatteTegn = alfabet + alfabet.toLowerCase() + " ";
-
+        // Разрешены только английские буквы и обычные пробелы
         for (const tegn of tekst) {
-            if (!tillatteTegn.includes(tegn)) {
+            if (!bokstaver.includes(tegn) && tegn !== " ") {
                 feil = "Bruk bare engelske bokstaver og mellomrom. Ikke bruk Enter.";
-                return;
+                return false;
             }
         }
 
-        if (nokkel === undefined) {
-            feil = "Skriv inn en nøkkel.";
-            return;
+        if (metode === "Caesar") {
+            if (nokkel === undefined) {
+                feil = "Skriv inn en nøkkel.";
+                return false;
+            }
+
+            if (!Number.isInteger(nokkel) || nokkel < 0 || nokkel > 25) {
+                feil = "Nøkkelen må være et heltall fra 0 til 25.";
+                return false;
+            }
+        } else {
+            if (!vigenereNokkel) {
+                feil = "Skriv inn en Vigenère-nøkkel.";
+                return false;
+            }
+
+            // В ключе Vigenère разрешены только английские буквы
+            for (const tegn of vigenereNokkel) {
+                if (!bokstaver.includes(tegn)) {
+                    feil = "Nøkkelen kan bare inneholde engelske bokstaver.";
+                    return false;
+                }
+            }
         }
 
-        if (!Number.isInteger(nokkel) || nokkel < 0 || nokkel > 25) {
-            feil = "Nøkkelen må være et heltall fra 0 til 25.";
-            return;
-        }
+        return true;
+    }
 
+    function flyttBokstav(tegn: string, forskyvning: number) {
+        const indeks = alfabet.indexOf(tegn.toUpperCase());
+
+        // +26 и %26 позволяют перейти через границу алфавита
+        const nyIndeks = (indeks + forskyvning + 26) % 26;
+        const nyBokstav = alfabet.charAt(nyIndeks);
+
+        // Сохраняем регистр исходной буквы
+        return tegn === tegn.toLowerCase()
+            ? nyBokstav.toLowerCase()
+            : nyBokstav;
+    }
+
+    function caesar(retning: number, valgtNokkel: number) {
         let nyTekst = "";
 
         for (const tegn of tekst) {
-            // Пробелы не шифруем
+            if (tegn === " ") {
+                nyTekst += " ";
+            } else {
+                nyTekst += flyttBokstav(tegn, retning * valgtNokkel);
+            }
+        }
+
+        return nyTekst;
+    }
+
+    function vigenere(retning: number) {
+        let nyTekst = "";
+        let nokkelIndeks = 0;
+        const storNokkel = vigenereNokkel.toUpperCase();
+
+        for (const tegn of tekst) {
+            // Пробел сохраняем, букву ключа на него не расходуем
             if (tegn === " ") {
                 nyTekst += " ";
                 continue;
             }
 
-            const indeks = alfabet.indexOf(tegn.toUpperCase());
+            // Повторяем ключ, когда доходим до его конца
+            const nokkelBokstav = storNokkel.charAt(
+                nokkelIndeks % storNokkel.length
+            );
 
-            // 1 — сдвиг вперёд, -1 — сдвиг назад.
-            // +26 и %26 обеспечивают переход через границу алфавита.
-            const nyIndeks = (indeks + retning * nokkel + 26) % 26;
-            const nyBokstav = alfabet.charAt(nyIndeks);
+            // A — сдвиг 0, B — 1, C — 2 и так далее
+            const forskyvning = alfabet.indexOf(nokkelBokstav);
 
-            // Сохраняем большие и маленькие буквы
-            if (tegn === tegn.toLowerCase()) {
-                nyTekst += nyBokstav.toLowerCase();
-            } else {
-                nyTekst += nyBokstav;
-            }
+            nyTekst += flyttBokstav(tegn, retning * forskyvning);
+            nokkelIndeks++;
         }
 
-        resultat = nyTekst;
+        return nyTekst;
+    }
+
+    function behandle(retning: number) {
+        feil = "";
+        resultat = "";
+
+        if (!kontrollerInput()) {
+            return;
+        }
+
+        // 1 — шифрование, -1 — расшифровка
+        if (metode === "Caesar") {
+            if (nokkel !== undefined) {
+                resultat = caesar(retning, nokkel);
+            }
+        } else {
+            resultat = vigenere(retning);
+        }
     }
 </script>
 
 <main>
     <h1>Kryptografiverktøy</h1>
-    <h2>Caesar-kryptering</h2>
-    <p>Skriv inn engelske bokstaver og en nøkkel fra 0 til 25.</p>
+    <p>Krypter og dekrypter tekst med Caesar eller Vigenère.</p>
+
+    <label for="metode">Metode:</label>
+    <select
+        id="metode"
+        bind:value={metode}
+        onchange={byttMetode}
+    >
+        <option value="Caesar">Caesar</option>
+        <option value="Vigenere">Vigenère</option>
+    </select>
 
     <label for="tekst">Tekst:</label>
     <textarea
@@ -76,19 +151,29 @@
         placeholder="Hello world"
     ></textarea>
 
-    <label for="nokkel">Nøkkel (0–25):</label>
-    <input
-        id="nokkel"
-        type="number"
-        min="0"
-        max="25"
-        step="1"
-        bind:value={nokkel}
-    />
+    {#if metode === "Caesar"}
+        <label for="nokkel">Nøkkel (0–25):</label>
+        <input
+            id="nokkel"
+            type="number"
+            min="0"
+            max="25"
+            step="1"
+            bind:value={nokkel}
+        />
+    {:else}
+        <label for="vigenereNokkel">Nøkkel (engelske bokstaver):</label>
+        <input
+            id="vigenereNokkel"
+            type="text"
+            bind:value={vigenereNokkel}
+            placeholder="KEY"
+        />
+    {/if}
 
     <div class="knapper">
-        <button onclick={() => caesar(1)}>Krypter</button>
-        <button onclick={() => caesar(-1)}>Dekrypter</button>
+        <button onclick={() => behandle(1)}>Krypter</button>
+        <button onclick={() => behandle(-1)}>Dekrypter</button>
     </div>
 
     {#if feil}
@@ -127,7 +212,8 @@
     }
 
     textarea,
-    input {
+    input,
+    select {
         box-sizing: border-box;
         width: 100%;
         padding: 10px;
